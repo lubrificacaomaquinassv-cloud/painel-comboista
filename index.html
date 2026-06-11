@@ -47,9 +47,6 @@
     .kpi-hero .kl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
     .kpi-hero .kv{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;line-height:1;color:var(--gl)}
     .kpi-hero .ku{font-size:13px;color:var(--text3);margin-top:8px}
-    .section-muted{opacity:.92}
-    .kpi2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
-    @media(max-width:500px){.kpi2{grid-template-columns:1fr}}
     .kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden}
     .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)}
     .kpi.y::before{background:var(--yellow)}
@@ -128,16 +125,6 @@
     <div class="card" id="tbl-hoje"><div class="loading">CARREGANDO...</div></div>
   </section>
 
-  <section class="section section-muted">
-    <div class="stitle">Resumo do comboio</div>
-    <div class="kpi2">
-      <div class="kpi g"><div class="kl">Recebido do posto</div><div class="kv" id="k-recebido" style="font-size:22px">—</div><div class="ku">total transferências</div></div>
-      <div class="kpi b"><div class="kl">Distribuído total</div><div class="kv" id="k-dist" style="font-size:22px">—</div><div class="ku">abastecido nas máquinas</div></div>
-    </div>
-    <div class="stitle" style="font-size:11px;margin-top:4px">Entradas (posto → comboio)</div>
-    <div class="card" id="tbl-entradas"><div class="loading">CARREGANDO...</div></div>
-  </section>
-
   <!-- LUBRIFICAÇÃO -->
   <section class="section">
     <div class="stitle">Lubrificação — status de troca</div>
@@ -160,7 +147,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.1 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
+<footer>Painel Comboista v1.2 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
 
 <script src="config.js"></script>
 <script>
@@ -303,24 +290,6 @@ function renderAbastHoje(abast) {
     </tr>`).join('')}</tbody></table>`;
 }
 
-function renderEntradas(transf) {
-  const el = document.getElementById('tbl-entradas');
-  const rows = transf.slice(0, 30);
-  if (!rows.length) {
-    el.innerHTML = '<div class="empty">Nenhuma entrada registrada</div>';
-    return;
-  }
-  el.innerHTML = `<table>
-    <thead><tr><th>Data</th><th>Combustível</th><th>Origem</th><th>Quantidade (L)</th><th>Obs</th></tr></thead>
-    <tbody>${rows.map(t => `<tr>
-      <td>${fmtDt(t.data)}</td>
-      <td>${t.combustivel || '—'}</td>
-      <td>${t.origem || '—'}</td>
-      <td style="color:var(--gl);font-weight:700">${fmt(t.quantidade_l, 1)} L</td>
-      <td style="color:var(--text3)">${t.observacao || '—'}</td>
-    </tr>`).join('')}</tbody></table>`;
-}
-
 const GAUGE_C = 2 * Math.PI * 52;
 
 function updateGauge(saldo, pct) {
@@ -365,15 +334,12 @@ async function refresh() {
     const abastHoje = abast.filter(d => new Date(d.created_at) >= hoje);
     const litrosHoje = abastHoje.reduce((s, d) => s + (Number(d.liters) || 0), 0);
 
-    document.getElementById('k-recebido').textContent = fmt(totalRec) + ' L';
-    document.getElementById('k-dist').textContent = fmt(totalDist) + ' L';
     updateGauge(saldo, pct);
     document.getElementById('k-hoje-l').textContent = fmt(litrosHoje) + ' L';
     document.getElementById('k-hoje-n').textContent =
       abastHoje.length + ' abastecimento(s) · capacidade ' + fmt(CAP) + ' L';
 
     renderAbastHoje(abast);
-    renderEntradas(transf);
 
     _lubAll = await fetchLubPanel();
     renderLubTable();
