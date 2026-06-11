@@ -67,7 +67,9 @@
     .st-prox{background:#2a2200;color:var(--yellow)}
     .st-troca{background:#3a1800;color:var(--orange)}
     .st-venc{background:#2a1010;color:#e74c3c}
-    .filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+    .filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+    .date-select{padding:6px 12px;font-family:'Barlow',sans-serif;font-size:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:6px;min-width:160px}
+    .filter-hint{font-size:11px;color:var(--text3);margin-left:4px}
     .fb{padding:6px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:6px;cursor:pointer;text-transform:uppercase}
     .fb.active{background:var(--green);color:#fff;border-color:var(--green)}
     .loading,.empty{text-align:center;padding:24px;color:var(--text2);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px}
@@ -121,7 +123,17 @@
         <div class="ku" id="k-hoje-n">0 abastecimento(s) no comboio</div>
       </div>
     </div>
-    <div class="stitle" style="font-size:11px;margin-bottom:8px">Abastecimentos de hoje</div>
+    <div class="stitle" style="font-size:11px;margin-bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between">
+      <span>Abastecimentos</span>
+      <span class="filter-hint" id="abast-filter-label">Últimos 10</span>
+    </div>
+    <div class="filters" id="abast-filters">
+      <button type="button" class="fb active" data-f="ultimos10">Últimos 10</button>
+      <button type="button" class="fb" data-f="hoje">Hoje</button>
+      <select id="abast-date-select" class="date-select" aria-label="Filtrar por dia">
+        <option value="">— Escolher dia —</option>
+      </select>
+    </div>
     <div class="card" id="tbl-hoje"><div class="loading">CARREGANDO...</div></div>
   </section>
 
@@ -147,7 +159,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.2 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
+<footer>Painel Comboista v1.3 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
 
 <script src="config.js"></script>
 <script>
@@ -158,7 +170,94 @@ const REFRESH = window.REFRESH_MS || 30000;
 
 let _lubAll = [];
 let _lubFiltro = 'todos';
+let _abastAll = [];
+let _abastFiltro = 'ultimos10';
 let _timer = null;
+
+function dayKey(iso) {
+  const x = new Date(iso);
+  if (Number.isNaN(x.getTime())) return '';
+  return x.toLocaleDateString('en-CA');
+}
+
+function dayLabel(key) {
+  if (!key) return '—';
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const hoje = dayKey(new Date());
+  if (key === hoje) return 'Hoje · ' + dt.toLocaleDateString('pt-BR');
+  return dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+}
+
+function buildAbastDateSelect() {
+  const sel = document.getElementById('abast-date-select');
+  const days = [...new Set(_abastAll.map(r => dayKey(r.created_at)).filter(Boolean))];
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Escolher dia —</option>' +
+    days.map(k => `<option value="${k}">${dayLabel(k)}</option>`).join('');
+  if (cur && days.includes(cur)) sel.value = cur;
+}
+
+function getAbastFiltrados() {
+  if (_abastFiltro === 'ultimos10') return _abastAll.slice(0, 10);
+  if (_abastFiltro === 'hoje') {
+    const hoje = dayKey(new Date());
+    return _abastAll.filter(r => dayKey(r.created_at) === hoje);
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(_abastFiltro)) {
+    return _abastAll.filter(r => dayKey(r.created_at) === _abastFiltro);
+  }
+  return _abastAll.slice(0, 10);
+}
+
+function abastFilterLabel() {
+  if (_abastFiltro === 'ultimos10') return 'Últimos 10 registros';
+  if (_abastFiltro === 'hoje') return 'Somente hoje';
+  return dayLabel(_abastFiltro);
+}
+
+function renderAbastTable() {
+  const rows = getAbastFiltrados();
+  const el = document.getElementById('tbl-hoje');
+  document.getElementById('abast-filter-label').textContent = abastFilterLabel();
+
+  if (!rows.length) {
+    const msg = _abastFiltro === 'hoje'
+      ? 'Nenhum abastecimento hoje — use Últimos 10 ou escolha outro dia'
+      : 'Nenhum registro neste filtro';
+    el.innerHTML = `<div class="empty">${msg}</div>`;
+    return;
+  }
+
+  const showData = _abastFiltro === 'ultimos10' || /^\d{4}-\d{2}-\d{2}$/.test(_abastFiltro);
+  el.innerHTML = `<table>
+    <thead><tr>
+      ${showData ? '<th>Data</th>' : ''}
+      <th>Hora</th><th>OS</th><th>Frota</th><th>Operador</th><th>Local</th><th>Comb.</th><th>Litros</th><th>Horím.</th>
+    </tr></thead>
+    <tbody>${rows.map(d => `<tr>
+      ${showData ? `<td>${fmtDt(d.created_at)}</td>` : ''}
+      <td>${fmtHr(d.created_at)}</td>
+      <td>${d.order_number || '—'}</td>
+      <td><b>${d.vehicle || '—'}</b></td>
+      <td>${d.operator || '—'}</td>
+      <td>${d.work_front || d.location || '—'}</td>
+      <td>${d.fuel_type || '—'}</td>
+      <td><b>${fmt(d.liters, 1)} L</b></td>
+      <td>${d.hourmeter ? fmt(d.hourmeter, 0) + 'h' : '—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function setAbastFiltro(f) {
+  _abastFiltro = f;
+  document.querySelectorAll('#abast-filters .fb').forEach(b => {
+    b.classList.toggle('active', b.dataset.f === f);
+  });
+  const sel = document.getElementById('abast-date-select');
+  if (f === 'ultimos10' || f === 'hoje') sel.value = '';
+  else if (/^\d{4}-\d{2}-\d{2}$/.test(f)) sel.value = f;
+  renderAbastTable();
+}
 
 async function sbFetch(resource, params = '') {
   const r = await fetch(`${SB_URL}/rest/v1/${resource}?${params}`, {
@@ -268,29 +367,7 @@ function renderLubTable() {
     </tr>`).join('')}</tbody></table>`;
 }
 
-function renderAbastHoje(abast) {
-  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-  const rows = abast.filter(d => new Date(d.created_at) >= hoje);
-  const el = document.getElementById('tbl-hoje');
-  if (!rows.length) {
-    el.innerHTML = '<div class="empty">Nenhum abastecimento registrado hoje</div>';
-    return;
-  }
-  el.innerHTML = `<table>
-    <thead><tr><th>Hora</th><th>OS</th><th>Frota</th><th>Operador</th><th>Local</th><th>Comb.</th><th>Litros</th><th>Horím.</th></tr></thead>
-    <tbody>${rows.map(d => `<tr>
-      <td>${fmtHr(d.created_at)}</td>
-      <td>${d.order_number || '—'}</td>
-      <td><b>${d.vehicle || '—'}</b></td>
-      <td>${d.operator || '—'}</td>
-      <td>${d.work_front || d.location || '—'}</td>
-      <td>${d.fuel_type || '—'}</td>
-      <td><b>${fmt(d.liters, 1)} L</b></td>
-      <td>${d.hourmeter ? fmt(d.hourmeter, 0) + 'h' : '—'}</td>
-    </tr>`).join('')}</tbody></table>`;
-}
-
-const GAUGE_C = 2 * Math.PI * 52;
+ = 2 * Math.PI * 52;
 
 function updateGauge(saldo, pct) {
   const ring = document.getElementById('gauge-ring');
@@ -322,16 +399,18 @@ async function refresh() {
   try {
     const [transf, abast] = await Promise.all([
       sbFetch('combustivel_transferencia', 'destino=eq.COMBOIO&order=data.desc'),
-      sbFetch('vw_abastecimento_consolidado', 'order=created_at.desc&limit=200'),
+      sbFetch('vw_abastecimento_consolidado', 'order=created_at.desc&limit=500'),
     ]);
+
+    _abastAll = abast;
 
     const totalRec = transf.reduce((s, d) => s + (Number(d.quantidade_l) || 0), 0);
     const totalDist = abast.reduce((s, d) => s + (Number(d.liters) || 0), 0);
     const saldo = Math.max(0, totalRec - totalDist);
     const pct = CAP > 0 ? Math.min(100, (saldo / CAP) * 100) : 0;
 
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    const abastHoje = abast.filter(d => new Date(d.created_at) >= hoje);
+    const hojeKey = dayKey(new Date());
+    const abastHoje = abast.filter(d => dayKey(d.created_at) === hojeKey);
     const litrosHoje = abastHoje.reduce((s, d) => s + (Number(d.liters) || 0), 0);
 
     updateGauge(saldo, pct);
@@ -339,7 +418,8 @@ async function refresh() {
     document.getElementById('k-hoje-n').textContent =
       abastHoje.length + ' abastecimento(s) · capacidade ' + fmt(CAP) + ' L';
 
-    renderAbastHoje(abast);
+    buildAbastDateSelect();
+    renderAbastTable();
 
     _lubAll = await fetchLubPanel();
     renderLubTable();
@@ -361,6 +441,17 @@ document.getElementById('lub-filters').addEventListener('click', e => {
   _lubFiltro = btn.dataset.f;
   document.querySelectorAll('#lub-filters .fb').forEach(b => b.classList.toggle('active', b === btn));
   renderLubTable();
+});
+
+document.getElementById('abast-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.fb');
+  if (!btn) return;
+  setAbastFiltro(btn.dataset.f);
+});
+
+document.getElementById('abast-date-select').addEventListener('change', e => {
+  const v = e.target.value;
+  if (v) setAbastFiltro(v);
 });
 
 function startRefresh() {
