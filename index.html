@@ -159,7 +159,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.3.1 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
+<footer>Painel Comboista v1.3.2 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
 
 <script src="config.js"></script>
 <script>
@@ -367,7 +367,7 @@ function renderLubTable() {
     </tr>`).join('')}</tbody></table>`;
 }
 
- = 2 * Math.PI * 52;
+const GAUGE_C = 2 * Math.PI * 52;
 
 function updateGauge(saldo, pct) {
   const ring = document.getElementById('gauge-ring');
@@ -432,6 +432,9 @@ async function refresh() {
     dot.classList.add('err');
     msg.textContent = 'Erro ao atualizar';
     console.error(e);
+    const errMsg = '<div class="empty err">Erro ao carregar dados — verifique conexão</div>';
+    document.getElementById('tbl-hoje').innerHTML = errMsg;
+    document.getElementById('tbl-lub').innerHTML = errMsg;
   }
 }
 
@@ -466,7 +469,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('online', refresh);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=6', { updateViaCache: 'none' }).then(reg => {
+  navigator.serviceWorker.register('./sw.js?v=7', { updateViaCache: 'none' }).then(reg => {
     reg.update();
     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     reg.addEventListener('updatefound', () => {
