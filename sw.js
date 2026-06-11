@@ -1,5 +1,5 @@
-const CACHE = 'painel-comboista-v1';
-const ASSETS = ['./', './index.html', './config.js', './manifest.webmanifest'];
+const CACHE = 'painel-comboista-v2';
+const ASSETS = ['./', './index.html', './config.js', './manifest.webmanifest', './icons/logo-sv.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
