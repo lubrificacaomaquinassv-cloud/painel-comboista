@@ -1,0 +1,11 @@
+{
+  "name": "Painel Comboista SV",
+  "short_name": "Comboista",
+  "description": "Abastecimento e lubrificação — Santa Vergínia",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a1409",
+  "theme_color": "#4a9e3f",
+  "orientation": "any",
+  "lang": "pt-BR"
+}

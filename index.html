@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <meta name="theme-color" content="#4a9e3f"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <link rel="manifest" href="manifest.webmanifest"/>
+  <title>Painel Comboista — SV</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --bg:#0a1409;--bg2:#111c10;--bg3:#172015;--border:#1e2e1c;
+      --green:#4a9e3f;--gl:#6fcf60;--yellow:#d4a017;--red:#c0392b;--blue:#2980b9;--orange:#e67e22;
+      --text:#e8edd0;--text2:#8aab80;--text3:#4a6644;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:15px}
+    .header{background:var(--bg2);border-bottom:2px solid var(--green);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    .htitle{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;letter-spacing:2px;text-transform:uppercase}
+    .hsub{font-size:11px;color:var(--text2);letter-spacing:1px;margin-top:2px}
+    .sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gl);margin-right:6px;animation:pulse 2s infinite}
+    .sync-dot.err{background:var(--red);animation:none}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .meta{font-size:11px;color:var(--text2);text-align:right}
+    main{padding:16px 20px 28px;max-width:1200px;margin:0 auto}
+    .section{margin-bottom:22px}
+    .stitle{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gl);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .stitle::before{content:'';width:4px;height:14px;background:var(--green);border-radius:2px}
+    .combrow{display:grid;grid-template-columns:minmax(140px,180px) 1fr;gap:14px;margin-bottom:16px}
+    @media(max-width:700px){.combrow{grid-template-columns:1fr}}
+    .tank-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:6px}
+    .tank-outer{width:72px;height:130px;background:#0d180c;border:2px solid var(--border);border-radius:10px;position:relative;overflow:hidden}
+    .tank-liquid{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 8px 8px;transition:height .8s ease;background:var(--green)}
+    .tank-pct{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 4px #000}
+    .tank-vol{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700}
+    .tank-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;text-transform:uppercase}
+    .kpi4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .kpi3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:900px){.kpi4,.kpi3{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:500px){.kpi4,.kpi3{grid-template-columns:1fr}}
+    .kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden}
+    .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)}
+    .kpi.y::before{background:var(--yellow)}
+    .kpi.r::before{background:var(--red)}
+    .kpi.b::before{background:var(--blue)}
+    .kl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+    .kv{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;line-height:1.1}
+    .ku{font-size:11px;color:var(--text3);margin-top:4px}
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:480px}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:9px 10px;border-bottom:1px solid #111c10;font-size:13px}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#131f12}
+    .st{display:inline-block;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap}
+    .st-ok{background:#1a3318;color:var(--gl)}
+    .st-prox-troca{background:#1a2838;color:#7ab0d4}
+    .st-prox{background:#2a2200;color:var(--yellow)}
+    .st-troca{background:#3a1800;color:var(--orange)}
+    .st-venc{background:#2a1010;color:#e74c3c}
+    .filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+    .fb{padding:6px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:6px;cursor:pointer;text-transform:uppercase}
+    .fb.active{background:var(--green);color:#fff;border-color:var(--green)}
+    .loading,.empty{text-align:center;padding:24px;color:var(--text2);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px}
+    .err{color:var(--red);padding:12px;font-size:12px}
+    .lub-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
+    @media(max-width:700px){.lub-kpis{grid-template-columns:repeat(3,1fr)}}
+    .lk{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+    .lk .n{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700}
+    .lk .l{font-size:9px;color:var(--text3);text-transform:uppercase;margin-top:2px}
+    footer{text-align:center;padding:16px;font-size:10px;color:var(--text3);border-top:1px solid var(--border)}
+  </style>
+</head>
+<body>
+<header class="header">
+  <div>
+    <div class="htitle">Painel Comboista</div>
+    <div class="hsub">Abastecimento · Lubrificação · Santa Vergínia</div>
+  </div>
+  <div class="meta">
+    <div><span class="sync-dot" id="sync-dot"></span><span id="sync-msg">Carregando...</span></div>
+    <div id="sync-time">—</div>
+  </div>
+</header>
+
+<main>
+  <!-- ABASTECIMENTO -->
+  <section class="section">
+    <div class="stitle">Comboio — saldo e abastecimento do dia</div>
+    <div class="combrow">
+      <div class="tank-card">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Tanque comboio</div>
+        <div class="tank-outer">
+          <div class="tank-liquid" id="tank-fill" style="height:0%"></div>
+          <div class="tank-pct" id="tank-pct">0%</div>
+        </div>
+        <div class="tank-vol" id="tank-vol">— L</div>
+        <span class="tank-badge" id="tank-badge" style="background:#1a3318;color:var(--gl)">—</span>
+      </div>
+      <div class="kpi4">
+        <div class="kpi g"><div class="kl">Recebido posto</div><div class="kv" id="k-recebido">—</div><div class="ku">total transferências</div></div>
+        <div class="kpi b"><div class="kl">Distribuído</div><div class="kv" id="k-dist">—</div><div class="ku">abastecido máquinas</div></div>
+        <div class="kpi" id="k-saldo-wrap"><div class="kl">Saldo comboio</div><div class="kv" id="k-saldo">—</div><div class="ku" id="k-saldo-pct">—</div></div>
+        <div class="kpi y"><div class="kl">Hoje</div><div class="kv" id="k-hoje-l">—</div><div class="ku" id="k-hoje-n">0 abastecimentos</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="stitle">Abastecimentos de hoje</div>
+    <div class="card" id="tbl-hoje"><div class="loading">CARREGANDO...</div></div>
+  </section>
+
+  <section class="section">
+    <div class="stitle">Entradas no comboio (posto → comboio)</div>
+    <div class="card" id="tbl-entradas"><div class="loading">CARREGANDO...</div></div>
+  </section>
+
+  <!-- LUBRIFICAÇÃO -->
+  <section class="section">
+    <div class="stitle">Lubrificação — status de troca</div>
+    <div class="lub-kpis">
+      <div class="lk"><div class="n" id="lk-venc" style="color:#e74c3c">0</div><div class="l">Vencido</div></div>
+      <div class="lk"><div class="n" id="lk-troca" style="color:var(--orange)">0</div><div class="l">Troca</div></div>
+      <div class="lk"><div class="n" id="lk-prox" style="color:var(--yellow)">0</div><div class="l">Próximo</div></div>
+      <div class="lk"><div class="n" id="lk-pt" style="color:#7ab0d4">0</div><div class="l">Próx. troca</div></div>
+      <div class="lk"><div class="n" id="lk-ok" style="color:var(--gl)">0</div><div class="l">OK</div></div>
+    </div>
+    <div class="filters" id="lub-filters">
+      <button class="fb active" data-f="todos">Todos</button>
+      <button class="fb" data-f="VENCIDO">Vencido</button>
+      <button class="fb" data-f="TROCA">Troca</button>
+      <button class="fb" data-f="PROXIMO">Próximo</button>
+      <button class="fb" data-f="PROXIMA TROCA">Próx. troca</button>
+      <button class="fb" data-f="OK">OK</button>
+    </div>
+    <div class="card" id="tbl-lub"><div class="loading">CARREGANDO...</div></div>
+  </section>
+</main>
+
+<footer>Painel Comboista v1.0 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
+
+<script src="config.js"></script>
+<script>
+const SB_URL = window.SB_URL;
+const SB_KEY = window.SB_KEY;
+const CAP = window.CAP_COMBOIO || 5000;
+const REFRESH = window.REFRESH_MS || 30000;
+
+let _lubAll = [];
+let _lubFiltro = 'todos';
+let _timer = null;
+
+async function sbFetch(resource, params = '') {
+  const r = await fetch(`${SB_URL}/rest/v1/${resource}?${params}`, {
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY },
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function fmt(n, dec = 0) {
+  return n == null ? '—' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtDt(d) { return d ? new Date(d).toLocaleDateString('pt-BR') : '—'; }
+function fmtHr(d) {
+  if (!d) return '—';
+  const x = new Date(d);
+  return x.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+function fmtDtHr(d) { return d ? fmtDt(d) + ' ' + fmtHr(d) : '—'; }
+
+function lubStatus(rest) {
+  if (rest <= 0) return 'VENCIDO';
+  if (rest <= 50) return 'TROCA';
+  if (rest <= 100) return 'PROXIMO';
+  if (rest <= 250) return 'PROXIMA TROCA';
+  return 'OK';
+}
+
+function stClass(s) {
+  return {
+    OK: 'st-ok',
+    'PROXIMA TROCA': 'st-prox-troca',
+    PROXIMO: 'st-prox',
+    TROCA: 'st-troca',
+    VENCIDO: 'st-venc',
+  }[s] || 'st-ok';
+}
+
+async function fetchLubPanel() {
+  const [v3, ult, equip] = await Promise.all([
+    sbFetch('lubrificacao_v3', 'select=vehicle,hourmeter_atual,hourmeter_prox,data_servico,tipo_servico&order=data_servico.desc'),
+    sbFetch('ultima_troca_lubri', 'select=frota,horimetro_ultima_troca,data_ultima_troca'),
+    sbFetch('dim_equipamento_lubri', 'select=frota,intervalo_horas,ativo&ativo=eq.true'),
+  ]);
+  const ultMap = {}; ult.forEach(u => { ultMap[String(u.frota)] = u; });
+  const eqMap = {}; equip.forEach(e => { eqMap[String(e.frota)] = e; });
+  const latest = {};
+  v3.forEach(r => {
+    const f = String(r.vehicle || '').trim();
+    if (!f || latest[f]) return;
+    latest[f] = { h_atual: Number(r.hourmeter_atual) || 0, h_prox: Number(r.hourmeter_prox) || 0, data: r.data_servico };
+  });
+  const frotas = new Set([...Object.keys(latest), ...Object.keys(ultMap), ...Object.keys(eqMap)]);
+  return [...frotas].map(f => {
+    const l = latest[f] || {};
+    const u = ultMap[f] || {};
+    const eq = eqMap[f] || {};
+    const hTroca = Number(u.horimetro_ultima_troca) || 0;
+    const hAtual = Number(l.h_atual) || hTroca;
+    const intervalo = Number(eq.intervalo_horas) || 250;
+    const hProx = Number(l.h_prox) || (hTroca ? hTroca + intervalo : 0);
+    const rest = hProx ? hProx - hAtual : 0;
+    const status = lubStatus(rest);
+    return {
+      vehicle: f,
+      ultima_troca: u.data_ultima_troca || l.data || null,
+      h_na_troca: hTroca,
+      h_proxima_troca: hProx,
+      h_atual: hAtual,
+      horas_restantes: rest,
+      status_troca: status,
+    };
+  }).sort((a, b) => a.horas_restantes - b.horas_restantes);
+}
+
+function renderLubTable() {
+  let data = _lubAll;
+  if (_lubFiltro !== 'todos') data = data.filter(d => d.status_troca === _lubFiltro);
+
+  const counts = { VENCIDO: 0, TROCA: 0, PROXIMO: 0, 'PROXIMA TROCA': 0, OK: 0 };
+  _lubAll.forEach(d => { if (counts[d.status_troca] != null) counts[d.status_troca]++; });
+
+  document.getElementById('lk-venc').textContent = counts.VENCIDO;
+  document.getElementById('lk-troca').textContent = counts.TROCA;
+  document.getElementById('lk-prox').textContent = counts.PROXIMO;
+  document.getElementById('lk-pt').textContent = counts['PROXIMA TROCA'];
+  document.getElementById('lk-ok').textContent = counts.OK;
+
+  const hc = h => Number(h) < 0 ? 'var(--red)' : Number(h) <= 100 ? 'var(--yellow)' : 'var(--gl)';
+  const el = document.getElementById('tbl-lub');
+  if (!data.length) {
+    el.innerHTML = '<div class="empty">Nenhum equipamento neste filtro</div>';
+    return;
+  }
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th>Frota</th><th>Última troca</th><th>H. troca</th><th>Próxima (h)</th><th>H. atual</th><th>Restantes</th><th>Status</th>
+    </tr></thead>
+    <tbody>${data.map(d => `<tr>
+      <td><b>${d.vehicle}</b></td>
+      <td>${d.ultima_troca ? fmtDt(d.ultima_troca) : '—'}</td>
+      <td>${fmt(d.h_na_troca, 0)}h</td>
+      <td>${fmt(d.h_proxima_troca, 0)}h</td>
+      <td>${fmt(d.h_atual, 0)}h</td>
+      <td style="color:${hc(d.horas_restantes)}"><b>${fmt(d.horas_restantes, 0)}h</b></td>
+      <td><span class="st ${stClass(d.status_troca)}">${d.status_troca}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function renderAbastHoje(abast) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const rows = abast.filter(d => new Date(d.created_at) >= hoje);
+  const el = document.getElementById('tbl-hoje');
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty">Nenhum abastecimento registrado hoje</div>';
+    return;
+  }
+  el.innerHTML = `<table>
+    <thead><tr><th>Hora</th><th>OS</th><th>Frota</th><th>Operador</th><th>Local</th><th>Comb.</th><th>Litros</th><th>Horím.</th></tr></thead>
+    <tbody>${rows.map(d => `<tr>
+      <td>${fmtHr(d.created_at)}</td>
+      <td>${d.order_number || '—'}</td>
+      <td><b>${d.vehicle || '—'}</b></td>
+      <td>${d.operator || '—'}</td>
+      <td>${d.work_front || d.location || '—'}</td>
+      <td>${d.fuel_type || '—'}</td>
+      <td><b>${fmt(d.liters, 1)} L</b></td>
+      <td>${d.hourmeter ? fmt(d.hourmeter, 0) + 'h' : '—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function renderEntradas(transf) {
+  const el = document.getElementById('tbl-entradas');
+  const rows = transf.slice(0, 30);
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty">Nenhuma entrada registrada</div>';
+    return;
+  }
+  el.innerHTML = `<table>
+    <thead><tr><th>Data</th><th>Combustível</th><th>Origem</th><th>Quantidade (L)</th><th>Obs</th></tr></thead>
+    <tbody>${rows.map(t => `<tr>
+      <td>${fmtDt(t.data)}</td>
+      <td>${t.combustivel || '—'}</td>
+      <td>${t.origem || '—'}</td>
+      <td style="color:var(--gl);font-weight:700">${fmt(t.quantidade_l, 1)} L</td>
+      <td style="color:var(--text3)">${t.observacao || '—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function updateTank(saldo, pct) {
+  const fill = document.getElementById('tank-fill');
+  const badge = document.getElementById('tank-badge');
+  const wrap = document.getElementById('k-saldo-wrap');
+  fill.style.height = pct.toFixed(1) + '%';
+  document.getElementById('tank-pct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('tank-vol').textContent = fmt(saldo) + ' L';
+  document.getElementById('k-saldo').textContent = fmt(saldo) + ' L';
+  document.getElementById('k-saldo-pct').textContent = pct.toFixed(1) + '% de ' + fmt(CAP) + ' L';
+
+  if (pct <= 20) {
+    fill.style.background = 'var(--red)';
+    badge.textContent = 'CRÍTICO'; badge.style.background = '#2a1010'; badge.style.color = '#e74c3c';
+    wrap.className = 'kpi r';
+  } else if (pct <= 40) {
+    fill.style.background = 'var(--yellow)';
+    badge.textContent = 'BAIXO'; badge.style.background = '#2a2200'; badge.style.color = 'var(--yellow)';
+    wrap.className = 'kpi y';
+  } else {
+    fill.style.background = 'var(--green)';
+    badge.textContent = 'OK'; badge.style.background = '#1a3318'; badge.style.color = 'var(--gl)';
+    wrap.className = 'kpi g';
+  }
+}
+
+async function refresh() {
+  const dot = document.getElementById('sync-dot');
+  const msg = document.getElementById('sync-msg');
+  try {
+    const [transf, abast] = await Promise.all([
+      sbFetch('combustivel_transferencia', 'destino=eq.COMBOIO&order=data.desc'),
+      sbFetch('vw_abastecimento_consolidado', 'order=created_at.desc&limit=200'),
+    ]);
+
+    const totalRec = transf.reduce((s, d) => s + (Number(d.quantidade_l) || 0), 0);
+    const totalDist = abast.reduce((s, d) => s + (Number(d.liters) || 0), 0);
+    const saldo = Math.max(0, totalRec - totalDist);
+    const pct = CAP > 0 ? Math.min(100, (saldo / CAP) * 100) : 0;
+
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const abastHoje = abast.filter(d => new Date(d.created_at) >= hoje);
+    const litrosHoje = abastHoje.reduce((s, d) => s + (Number(d.liters) || 0), 0);
+
+    document.getElementById('k-recebido').textContent = fmt(totalRec) + ' L';
+    document.getElementById('k-dist').textContent = fmt(totalDist) + ' L';
+    updateTank(saldo, pct);
+    document.getElementById('k-hoje-l').textContent = fmt(litrosHoje) + ' L';
+    document.getElementById('k-hoje-n').textContent = abastHoje.length + ' abastecimento(s)';
+
+    renderAbastHoje(abast);
+    renderEntradas(transf);
+
+    _lubAll = await fetchLubPanel();
+    renderLubTable();
+
+    dot.classList.remove('err');
+    msg.textContent = navigator.onLine ? 'Online · sincronizado' : 'Offline';
+    document.getElementById('sync-time').textContent =
+      'Atualizado ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch (e) {
+    dot.classList.add('err');
+    msg.textContent = 'Erro ao atualizar';
+    console.error(e);
+  }
+}
+
+document.getElementById('lub-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.fb');
+  if (!btn) return;
+  _lubFiltro = btn.dataset.f;
+  document.querySelectorAll('#lub-filters .fb').forEach(b => b.classList.toggle('active', b === btn));
+  renderLubTable();
+});
+
+function startRefresh() {
+  refresh();
+  if (_timer) clearInterval(_timer);
+  _timer = setInterval(refresh, REFRESH);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refresh();
+});
+window.addEventListener('online', refresh);
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+startRefresh();
+</script>
+</body>
+</html>
