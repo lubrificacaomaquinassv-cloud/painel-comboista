@@ -159,7 +159,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.3 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
+<footer>Painel Comboista v1.3.1 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
 
 <script src="config.js"></script>
 <script>
@@ -466,7 +466,20 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('online', refresh);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js?v=6', { updateViaCache: 'none' }).then(reg => {
+    reg.update();
+    if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          nw.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+    });
+  }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
 }
 
 startRefresh();
