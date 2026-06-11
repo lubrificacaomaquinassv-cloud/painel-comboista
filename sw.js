@@ -1,4 +1,4 @@
-const CACHE = 'painel-comboista-v2';
+const CACHE = 'painel-comboista-v3';
 const ASSETS = ['./', './index.html', './config.js', './manifest.webmanifest', './icons/logo-sv.png'];
 
 self.addEventListener('install', e => {

@@ -30,18 +30,26 @@
     .section{margin-bottom:22px}
     .stitle{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gl);margin-bottom:12px;display:flex;align-items:center;gap:8px}
     .stitle::before{content:'';width:4px;height:14px;background:var(--green);border-radius:2px}
-    .combrow{display:grid;grid-template-columns:minmax(140px,180px) 1fr;gap:14px;margin-bottom:16px}
-    @media(max-width:700px){.combrow{grid-template-columns:1fr}}
-    .tank-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:6px}
-    .tank-outer{width:72px;height:130px;background:#0d180c;border:2px solid var(--border);border-radius:10px;position:relative;overflow:hidden}
-    .tank-liquid{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 8px 8px;transition:height .8s ease;background:var(--green)}
-    .tank-pct{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 4px #000}
-    .tank-vol{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700}
-    .tank-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;text-transform:uppercase}
-    .kpi4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-    .kpi3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-    @media(max-width:900px){.kpi4,.kpi3{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:500px){.kpi4,.kpi3{grid-template-columns:1fr}}
+    .top-hero{display:grid;grid-template-columns:minmax(160px,200px) 1fr;gap:14px;margin-bottom:16px;align-items:stretch}
+    @media(max-width:600px){.top-hero{grid-template-columns:1fr}}
+    .gauge-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+    .gauge-wrap{position:relative;width:140px;height:140px}
+    .gauge-wrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+    .gauge-bg{fill:none;stroke:#1a2a18;stroke-width:10}
+    .gauge-fill{fill:none;stroke:var(--green);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .8s ease,stroke .3s}
+    .gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+    .gauge-pct{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;line-height:1}
+    .gauge-vol{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;color:var(--text2);margin-top:2px}
+    .gauge-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:6px}
+    .gauge-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;text-transform:uppercase}
+    .kpi-hero{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+    .kpi-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--yellow)}
+    .kpi-hero .kl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
+    .kpi-hero .kv{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;line-height:1;color:var(--gl)}
+    .kpi-hero .ku{font-size:13px;color:var(--text3);margin-top:8px}
+    .section-muted{opacity:.92}
+    .kpi2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+    @media(max-width:500px){.kpi2{grid-template-columns:1fr}}
     .kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden}
     .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)}
     .kpi.y::before{background:var(--yellow)}
@@ -91,35 +99,42 @@
 </header>
 
 <main>
-  <!-- ABASTECIMENTO -->
+  <!-- COMBOIO — KPI principal -->
   <section class="section">
-    <div class="stitle">Comboio — saldo e abastecimento do dia</div>
-    <div class="combrow">
-      <div class="tank-card">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Tanque comboio</div>
-        <div class="tank-outer">
-          <div class="tank-liquid" id="tank-fill" style="height:0%"></div>
-          <div class="tank-pct" id="tank-pct">0%</div>
+    <div class="stitle">Comboio — operação do dia</div>
+    <div class="top-hero">
+      <div class="gauge-card">
+        <div class="gauge-wrap">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="gauge-bg" cx="60" cy="60" r="52"/>
+            <circle class="gauge-fill" id="gauge-ring" cx="60" cy="60" r="52"
+              stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-pct" id="gauge-pct">0%</div>
+            <div class="gauge-vol" id="gauge-vol">— L</div>
+          </div>
         </div>
-        <div class="tank-vol" id="tank-vol">— L</div>
-        <span class="tank-badge" id="tank-badge" style="background:#1a3318;color:var(--gl)">—</span>
+        <div class="gauge-lbl">Saldo comboio</div>
+        <span class="gauge-badge" id="gauge-badge" style="background:#1a3318;color:var(--gl)">—</span>
       </div>
-      <div class="kpi4">
-        <div class="kpi g"><div class="kl">Recebido posto</div><div class="kv" id="k-recebido">—</div><div class="ku">total transferências</div></div>
-        <div class="kpi b"><div class="kl">Distribuído</div><div class="kv" id="k-dist">—</div><div class="ku">abastecido máquinas</div></div>
-        <div class="kpi" id="k-saldo-wrap"><div class="kl">Saldo comboio</div><div class="kv" id="k-saldo">—</div><div class="ku" id="k-saldo-pct">—</div></div>
-        <div class="kpi y"><div class="kl">Hoje</div><div class="kv" id="k-hoje-l">—</div><div class="ku" id="k-hoje-n">0 abastecimentos</div></div>
+      <div class="kpi-hero">
+        <div class="kl">Abastecido hoje</div>
+        <div class="kv" id="k-hoje-l">—</div>
+        <div class="ku" id="k-hoje-n">0 abastecimento(s) no comboio</div>
       </div>
     </div>
-  </section>
-
-  <section class="section">
-    <div class="stitle">Abastecimentos de hoje</div>
+    <div class="stitle" style="font-size:11px;margin-bottom:8px">Abastecimentos de hoje</div>
     <div class="card" id="tbl-hoje"><div class="loading">CARREGANDO...</div></div>
   </section>
 
-  <section class="section">
-    <div class="stitle">Entradas no comboio (posto → comboio)</div>
+  <section class="section section-muted">
+    <div class="stitle">Resumo do comboio</div>
+    <div class="kpi2">
+      <div class="kpi g"><div class="kl">Recebido do posto</div><div class="kv" id="k-recebido" style="font-size:22px">—</div><div class="ku">total transferências</div></div>
+      <div class="kpi b"><div class="kl">Distribuído total</div><div class="kv" id="k-dist" style="font-size:22px">—</div><div class="ku">abastecido nas máquinas</div></div>
+    </div>
+    <div class="stitle" style="font-size:11px;margin-top:4px">Entradas (posto → comboio)</div>
     <div class="card" id="tbl-entradas"><div class="loading">CARREGANDO...</div></div>
   </section>
 
@@ -145,7 +160,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.0 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
+<footer>Painel Comboista v1.1 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
 
 <script src="config.js"></script>
 <script>
@@ -306,29 +321,30 @@ function renderEntradas(transf) {
     </tr>`).join('')}</tbody></table>`;
 }
 
-function updateTank(saldo, pct) {
-  const fill = document.getElementById('tank-fill');
-  const badge = document.getElementById('tank-badge');
-  const wrap = document.getElementById('k-saldo-wrap');
-  fill.style.height = pct.toFixed(1) + '%';
-  document.getElementById('tank-pct').textContent = pct.toFixed(1) + '%';
-  document.getElementById('tank-vol').textContent = fmt(saldo) + ' L';
-  document.getElementById('k-saldo').textContent = fmt(saldo) + ' L';
-  document.getElementById('k-saldo-pct').textContent = pct.toFixed(1) + '% de ' + fmt(CAP) + ' L';
+const GAUGE_C = 2 * Math.PI * 52;
 
-  if (pct <= 20) {
-    fill.style.background = 'var(--red)';
+function updateGauge(saldo, pct) {
+  const ring = document.getElementById('gauge-ring');
+  const badge = document.getElementById('gauge-badge');
+  const p = Math.min(100, Math.max(0, pct));
+  const offset = GAUGE_C * (1 - p / 100);
+
+  ring.style.strokeDashoffset = String(offset);
+  document.getElementById('gauge-pct').textContent = p.toFixed(1) + '%';
+  document.getElementById('gauge-vol').textContent = fmt(saldo) + ' L';
+
+  let color = 'var(--green)';
+  if (p <= 20) {
+    color = 'var(--red)';
     badge.textContent = 'CRÍTICO'; badge.style.background = '#2a1010'; badge.style.color = '#e74c3c';
-    wrap.className = 'kpi r';
-  } else if (pct <= 40) {
-    fill.style.background = 'var(--yellow)';
+  } else if (p <= 40) {
+    color = 'var(--yellow)';
     badge.textContent = 'BAIXO'; badge.style.background = '#2a2200'; badge.style.color = 'var(--yellow)';
-    wrap.className = 'kpi y';
   } else {
-    fill.style.background = 'var(--green)';
     badge.textContent = 'OK'; badge.style.background = '#1a3318'; badge.style.color = 'var(--gl)';
-    wrap.className = 'kpi g';
   }
+  ring.style.stroke = color;
+  document.getElementById('gauge-pct').style.color = color;
 }
 
 async function refresh() {
@@ -351,9 +367,10 @@ async function refresh() {
 
     document.getElementById('k-recebido').textContent = fmt(totalRec) + ' L';
     document.getElementById('k-dist').textContent = fmt(totalDist) + ' L';
-    updateTank(saldo, pct);
+    updateGauge(saldo, pct);
     document.getElementById('k-hoje-l').textContent = fmt(litrosHoje) + ' L';
-    document.getElementById('k-hoje-n').textContent = abastHoje.length + ' abastecimento(s)';
+    document.getElementById('k-hoje-n').textContent =
+      abastHoje.length + ' abastecimento(s) · capacidade ' + fmt(CAP) + ' L';
 
     renderAbastHoje(abast);
     renderEntradas(transf);
