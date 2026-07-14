@@ -297,26 +297,43 @@ function stClass(s) {
 }
 
 async function fetchLubPanel() {
-  const [v3, ult, equip] = await Promise.all([
+  const [v3, ult, equip, apont] = await Promise.all([
     sbFetch('lubrificacao_v3', 'select=vehicle,hourmeter_atual,hourmeter_prox,data_servico,tipo_servico&order=data_servico.desc'),
     sbFetch('ultima_troca_lubri', 'select=frota,horimetro_ultima_troca,data_ultima_troca'),
     sbFetch('dim_equipamento_lubri', 'select=frota,intervalo_horas,ativo&ativo=eq.true'),
+    sbFetch('apontamento_campo', 'select=frota,h_final,data&order=data.desc'),
   ]);
   const ultMap = {}; ult.forEach(u => { ultMap[String(u.frota)] = u; });
   const eqMap = {}; equip.forEach(e => { eqMap[String(e.frota)] = e; });
+
+  // h_prox / hourmeter_prox continuam vindo do último serviço de lubrificação
   const latest = {};
   v3.forEach(r => {
     const f = String(r.vehicle || '').trim();
     if (!f || latest[f]) return;
     latest[f] = { h_atual: Number(r.hourmeter_atual) || 0, h_prox: Number(r.hourmeter_prox) || 0, data: r.data_servico };
   });
-  const frotas = new Set([...Object.keys(latest), ...Object.keys(ultMap), ...Object.keys(eqMap)]);
+
+  // h_atual passa a vir do apontamento_campo (atualiza diariamente),
+  // pegando o h_final mais recente por frota
+  const apontMap = {};
+  apont.forEach(r => {
+    const f = String(r.frota || '').trim();
+    if (!f || apontMap[f]) return;
+    const hf = Number(r.h_final);
+    if (!hf) return;
+    apontMap[f] = { h_atual: hf, data: r.data };
+  });
+
+  const frotas = new Set([...Object.keys(latest), ...Object.keys(ultMap), ...Object.keys(eqMap), ...Object.keys(apontMap)]);
   return [...frotas].map(f => {
     const l = latest[f] || {};
+    const a = apontMap[f] || {};
     const u = ultMap[f] || {};
     const eq = eqMap[f] || {};
     const hTroca = Number(u.horimetro_ultima_troca) || 0;
-    const hAtual = Number(l.h_atual) || hTroca;
+    // Prioridade: apontamento_campo (diário) > último serviço lubrificação > horímetro da última troca
+    const hAtual = Number(a.h_atual) || Number(l.h_atual) || hTroca;
     const intervalo = Number(eq.intervalo_horas) || 250;
     const hProx = Number(l.h_prox) || (hTroca ? hTroca + intervalo : 0);
     const rest = hProx ? hProx - hAtual : 0;
