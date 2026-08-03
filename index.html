@@ -139,7 +139,7 @@
 
   <!-- LUBRIFICAÇÃO -->
   <section class="section">
-    <div class="stitle">Lubrificação — status de troca</div>
+    <div class="stitle">Lubrificação — status de troca <span style="font-size:11px;color:var(--muted);font-weight:400">· H. atual = apontamento_campo</span></div>
     <div class="lub-kpis">
       <div class="lk"><div class="n" id="lk-venc" style="color:#e74c3c">0</div><div class="l">Vencido</div></div>
       <div class="lk"><div class="n" id="lk-troca" style="color:var(--orange)">0</div><div class="l">Troca</div></div>
@@ -159,7 +159,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.3.2 · Atualiza a cada 30s · Dados Supabase em tempo real</footer>
+<footer>Painel Comboista v1.5.0 · Saldo ciclo (2 últ. transf.) · Atualiza a cada 30s</footer>
 
 <script src="config.js"></script>
 <script>
@@ -306,7 +306,6 @@ async function fetchLubPanel() {
   const ultMap = {}; ult.forEach(u => { ultMap[String(u.frota)] = u; });
   const eqMap = {}; equip.forEach(e => { eqMap[String(e.frota)] = e; });
 
-  // h_prox / hourmeter_prox continuam vindo do último serviço de lubrificação
   const latest = {};
   v3.forEach(r => {
     const f = String(r.vehicle || '').trim();
@@ -314,8 +313,6 @@ async function fetchLubPanel() {
     latest[f] = { h_atual: Number(r.hourmeter_atual) || 0, h_prox: Number(r.hourmeter_prox) || 0, data: r.data_servico };
   });
 
-  // h_atual passa a vir do apontamento_campo (atualiza diariamente),
-  // pegando o h_final mais recente por frota
   const apontMap = {};
   apont.forEach(r => {
     const f = String(r.frota || '').trim();
@@ -332,7 +329,6 @@ async function fetchLubPanel() {
     const u = ultMap[f] || {};
     const eq = eqMap[f] || {};
     const hTroca = Number(u.horimetro_ultima_troca) || 0;
-    // Prioridade: apontamento_campo (diário) > último serviço lubrificação > horímetro da última troca
     const hAtual = Number(a.h_atual) || Number(l.h_atual) || hTroca;
     const intervalo = Number(eq.intervalo_horas) || 250;
     const hProx = Number(l.h_prox) || (hTroca ? hTroca + intervalo : 0);
@@ -371,14 +367,15 @@ function renderLubTable() {
   }
   el.innerHTML = `<table>
     <thead><tr>
-      <th>Frota</th><th>Última troca</th><th>H. troca</th><th>Próxima (h)</th><th>H. atual</th><th>Restantes</th><th>Status</th>
+      <th>Frota</th><th>Última troca</th><th>H. troca</th><th>Próxima (h)</th><th>H. atual</th><th>Apont. dia</th><th>Restantes</th><th>Status</th>
     </tr></thead>
     <tbody>${data.map(d => `<tr>
       <td><b>${d.vehicle}</b></td>
       <td>${d.ultima_troca ? fmtDt(d.ultima_troca) : '—'}</td>
       <td>${fmt(d.h_na_troca, 0)}h</td>
       <td>${fmt(d.h_proxima_troca, 0)}h</td>
-      <td>${fmt(d.h_atual, 0)}h</td>
+      <td title="${d.fonte_h_atual || ''}">${fmt(d.h_atual, 0)}h</td>
+      <td>${d.data_apontamento ? fmtDt(d.data_apontamento) : '—'}</td>
       <td style="color:${hc(d.horas_restantes)}"><b>${fmt(d.horas_restantes, 0)}h</b></td>
       <td><span class="st ${stClass(d.status_troca)}">${d.status_troca}</span></td>
     </tr>`).join('')}</tbody></table>`;
@@ -414,16 +411,20 @@ async function refresh() {
   const dot = document.getElementById('sync-dot');
   const msg = document.getElementById('sync-msg');
   try {
-    const [transf, abast] = await Promise.all([
-      sbFetch('combustivel_transferencia', 'destino=eq.COMBOIO&order=data.desc'),
+    const [saldoRows, abast] = await Promise.all([
+      sbFetch(
+        'vw_saldo_comboio',
+        'select=total_entrada_l,total_saida_l,saldo_litros,entrada_anterior_l,data_transferencia_anterior,data_transferencia,qtd_transferencias_ciclo&limit=1'
+      ),
       sbFetch('vw_abastecimento_consolidado', 'order=created_at.desc&limit=500'),
     ]);
 
     _abastAll = abast;
 
-    const totalRec = transf.reduce((s, d) => s + (Number(d.quantidade_l) || 0), 0);
-    const totalDist = abast.reduce((s, d) => s + (Number(d.liters) || 0), 0);
-    const saldo = Math.max(0, totalRec - totalDist);
+    const ciclo = saldoRows[0] || {};
+    const totalRec = Number(ciclo.total_entrada_l) || 0;
+    const totalDist = Number(ciclo.total_saida_l) || 0;
+    const saldo = Math.max(0, Number(ciclo.saldo_litros) || (totalRec - totalDist));
     const pct = CAP > 0 ? Math.min(100, (saldo / CAP) * 100) : 0;
 
     const hojeKey = dayKey(new Date());
@@ -432,8 +433,11 @@ async function refresh() {
 
     updateGauge(saldo, pct);
     document.getElementById('k-hoje-l').textContent = fmt(litrosHoje) + ' L';
+    const ant = Number(ciclo.entrada_anterior_l) || 0;
+    const ult = totalRec - ant;
     document.getElementById('k-hoje-n').textContent =
-      abastHoje.length + ' abastecimento(s) · capacidade ' + fmt(CAP) + ' L';
+      abastHoje.length + ' abastecimento(s) · ciclo ' + fmt(ant) + ' + ' + fmt(ult) +
+      ' L − ' + fmt(totalDist) + ' L = ' + fmt(saldo) + ' L';
 
     buildAbastDateSelect();
     renderAbastTable();
