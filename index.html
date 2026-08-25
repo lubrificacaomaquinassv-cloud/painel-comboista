@@ -159,7 +159,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.5.0 · Saldo ciclo (2 últ. transf.) · Atualiza a cada 30s</footer>
+<footer>Painel Comboista v1.6.0 · Saldo validado Python (25/08/2026) · Atualiza a cada 30s</footer>
 
 <script src="config.js"></script>
 <script>
@@ -434,10 +434,11 @@ async function refresh() {
     updateGauge(saldo, pct);
     document.getElementById('k-hoje-l').textContent = fmt(litrosHoje) + ' L';
     const ant = Number(ciclo.entrada_anterior_l) || 0;
-    const ult = totalRec - ant;
+    const qtd = Number(ciclo.qtd_transferencias_ciclo) || 0;
+    const dtCiclo = ciclo.data_transferencia_anterior || ciclo.data_transferencia || '';
     document.getElementById('k-hoje-n').textContent =
-      abastHoje.length + ' abastecimento(s) · ciclo ' + fmt(ant) + ' + ' + fmt(ult) +
-      ' L − ' + fmt(totalDist) + ' L = ' + fmt(saldo) + ' L';
+      abastHoje.length + ' abastecimento(s) · ciclo ' + (dtCiclo ? fmtDt(dtCiclo) + ' · ' : '') +
+      qtd + ' transf. · ' + fmt(totalRec) + ' L − ' + fmt(totalDist) + ' L = ' + fmt(saldo) + ' L';
 
     buildAbastDateSelect();
     renderAbastTable();
@@ -490,7 +491,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('online', refresh);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=7', { updateViaCache: 'none' }).then(reg => {
+  navigator.serviceWorker.register('./sw.js?v=10', { updateViaCache: 'none' }).then(reg => {
     reg.update();
     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     reg.addEventListener('updatefound', () => {
