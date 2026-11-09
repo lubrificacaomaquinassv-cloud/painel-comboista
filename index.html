@@ -159,7 +159,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.7.0 · Lub: última troca = lubrificacao_v3 preventiva · Atualiza a cada 30s</footer>
+<footer>Painel Comboista v1.8.0 · Lub via vw_painel_lub_comboista (SQL 008) · Atualiza a cada 30s</footer>
 
 <script src="config.js"></script>
 <script>
@@ -309,11 +309,35 @@ function proximaTrocaValida(hProx, hNaTroca, hServico, intervalo) {
 }
 
 async function fetchLubPanel() {
+  try {
+    const rows = await sbFetch(
+      'vw_painel_lub_comboista',
+      'select=frota,data_ultima_troca,h_na_troca,h_proxima_troca,h_atual,data_apontamento,horas_restantes&order=horas_restantes.asc'
+    );
+    if (rows && rows.length) {
+      return rows.map(r => {
+        const rest = Number(r.horas_restantes);
+        return {
+          vehicle: r.frota,
+          ultima_troca: r.data_ultima_troca,
+          h_na_troca: r.h_na_troca,
+          h_proxima_troca: r.h_proxima_troca,
+          h_atual: r.h_atual,
+          data_apontamento: r.data_apontamento,
+          horas_restantes: rest,
+          status_troca: lubStatus(rest),
+        };
+      });
+    }
+  } catch (e) {
+    console.warn('vw_painel_lub_comboista indisponível, usando fallback v3', e);
+  }
+
   const [v3, ult, equip, apont] = await Promise.all([
-    sbFetch('lubrificacao_v3', 'select=vehicle,hourmeter_atual,hourmeter_prox,data_servico,tipo_servico&order=data_servico.desc'),
+    sbFetch('lubrificacao_v3', 'select=vehicle,hourmeter_atual,hourmeter_prox,data_servico,tipo_servico&order=data_servico.desc&limit=5000'),
     sbFetch('ultima_troca_lubri', 'select=frota,horimetro_ultima_troca,data_ultima_troca'),
     sbFetch('dim_equipamento_lubri', 'select=frota,intervalo_horas,ativo&ativo=eq.true'),
-    sbFetch('apontamento_campo', 'select=frota,h_final,data&order=data.desc'),
+    sbFetch('apontamento_campo', 'select=frota,h_final,data&order=data.desc&limit=5000'),
   ]);
   const ultMap = {}; ult.forEach(u => { ultMap[String(u.frota)] = u; });
   const eqMap = {}; equip.forEach(e => { eqMap[String(e.frota)] = e; });
@@ -526,7 +550,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('online', refresh);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=11', { updateViaCache: 'none' }).then(reg => {
+  navigator.serviceWorker.register('./sw.js?v=12', { updateViaCache: 'none' }).then(reg => {
     reg.update();
     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     reg.addEventListener('updatefound', () => {
