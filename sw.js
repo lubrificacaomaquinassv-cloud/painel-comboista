@@ -1,4 +1,4 @@
-const CACHE = 'painel-comboista-v10';
+const CACHE = 'painel-comboista-v11';
 
 self.addEventListener('install', e => {
   e.waitUntil(self.skipWaiting());

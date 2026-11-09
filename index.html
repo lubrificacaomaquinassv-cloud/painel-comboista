@@ -159,7 +159,7 @@
   </section>
 </main>
 
-<footer>Painel Comboista v1.6.0 · Saldo validado Python (25/08/2026) · Atualiza a cada 30s</footer>
+<footer>Painel Comboista v1.7.0 · Lub: última troca = lubrificacao_v3 preventiva · Atualiza a cada 30s</footer>
 
 <script src="config.js"></script>
 <script>
@@ -296,6 +296,18 @@ function stClass(s) {
   }[s] || 'st-ok';
 }
 
+/** Próxima troca válida (espelha lub_proxima_troca_valida no Postgres). */
+function proximaTrocaValida(hProx, hNaTroca, hServico, intervalo) {
+  const iv = Number(intervalo) || 300;
+  const prox = Number(hProx);
+  const na = Number(hNaTroca) || 0;
+  const srv = Number(hServico) || 0;
+  if (prox > 10 && (!na || prox > na) && (!srv || prox > srv)) return prox;
+  if (na) return na + iv;
+  if (srv) return srv + iv;
+  return 0;
+}
+
 async function fetchLubPanel() {
   const [v3, ult, equip, apont] = await Promise.all([
     sbFetch('lubrificacao_v3', 'select=vehicle,hourmeter_atual,hourmeter_prox,data_servico,tipo_servico&order=data_servico.desc'),
@@ -306,11 +318,27 @@ async function fetchLubPanel() {
   const ultMap = {}; ult.forEach(u => { ultMap[String(u.frota)] = u; });
   const eqMap = {}; equip.forEach(e => { eqMap[String(e.frota)] = e; });
 
-  const latest = {};
+  const latestServ = {};
+  const latestPrev = {};
   v3.forEach(r => {
     const f = String(r.vehicle || '').trim();
-    if (!f || latest[f]) return;
-    latest[f] = { h_atual: Number(r.hourmeter_atual) || 0, h_prox: Number(r.hourmeter_prox) || 0, data: r.data_servico };
+    if (!f) return;
+    const tipo = String(r.tipo_servico || '').toLowerCase();
+    if (!latestServ[f]) {
+      latestServ[f] = {
+        h_atual: Number(r.hourmeter_atual) || 0,
+        h_prox: Number(r.hourmeter_prox) || 0,
+        data: r.data_servico,
+        tipo,
+      };
+    }
+    if (tipo === 'preventiva' && !latestPrev[f]) {
+      latestPrev[f] = {
+        h_troca: Number(r.hourmeter_atual) || 0,
+        h_prox: Number(r.hourmeter_prox) || 0,
+        data: r.data_servico,
+      };
+    }
   });
 
   const apontMap = {};
@@ -322,26 +350,33 @@ async function fetchLubPanel() {
     apontMap[f] = { h_atual: hf, data: r.data };
   });
 
-  const frotas = new Set([...Object.keys(latest), ...Object.keys(ultMap), ...Object.keys(eqMap), ...Object.keys(apontMap)]);
+  const frotas = new Set([
+    ...Object.keys(latestServ),
+    ...Object.keys(latestPrev),
+    ...Object.keys(ultMap),
+    ...Object.keys(eqMap),
+    ...Object.keys(apontMap),
+  ]);
   return [...frotas].map(f => {
-    const l = latest[f] || {};
+    const l = latestServ[f] || {};
+    const prev = latestPrev[f] || {};
     const a = apontMap[f] || {};
     const u = ultMap[f] || {};
     const eq = eqMap[f] || {};
-    const hTroca = Number(u.horimetro_ultima_troca) || 0;
+    const intervalo = Number(eq.intervalo_horas) || 300;
+    const hTroca = Number(prev.h_troca) || Number(u.horimetro_ultima_troca) || 0;
     const hAtual = Number(a.h_atual) || Number(l.h_atual) || hTroca;
-    const intervalo = Number(eq.intervalo_horas) || 250;
-    const hProx = Number(l.h_prox) || (hTroca ? hTroca + intervalo : 0);
+    const hProx = proximaTrocaValida(prev.h_prox || l.h_prox, hTroca, l.h_atual, intervalo);
     const rest = hProx ? hProx - hAtual : 0;
-    const status = lubStatus(rest);
     return {
       vehicle: f,
-      ultima_troca: u.data_ultima_troca || l.data || null,
+      ultima_troca: prev.data || u.data_ultima_troca || null,
       h_na_troca: hTroca,
       h_proxima_troca: hProx,
       h_atual: hAtual,
+      data_apontamento: a.data || null,
       horas_restantes: rest,
-      status_troca: status,
+      status_troca: lubStatus(rest),
     };
   }).sort((a, b) => a.horas_restantes - b.horas_restantes);
 }
@@ -491,7 +526,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('online', refresh);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=10', { updateViaCache: 'none' }).then(reg => {
+  navigator.serviceWorker.register('./sw.js?v=11', { updateViaCache: 'none' }).then(reg => {
     reg.update();
     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     reg.addEventListener('updatefound', () => {
